@@ -1,0 +1,4 @@
+
+# Format code
+echo "✨ Formatting code..."
+pnpm format
