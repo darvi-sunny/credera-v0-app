@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useParams, usePathname, useSearchParams } from 'next/navigation'
 import { ChatSelector } from './chat-selector'
 import { MobileMenu } from './mobile-menu'
 import { useSession } from 'next-auth/react'
@@ -10,7 +10,7 @@ import { UserNav } from '@/components/user-nav'
 import { Button } from '@/components/ui/button'
 import { VercelIcon, GitHubIcon } from '@/components/ui/icons'
 import { DEPLOY_URL } from '@/lib/constants'
-import { Info } from 'lucide-react'
+import { DownloadIcon, Info } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,11 @@ function SearchParamsHandler() {
 }
 
 export function AppHeader({ className = '' }: AppHeaderProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
+  // Extract chatId manually
+  const chatId =
+    pathname.startsWith('/chats/') ? pathname.split('/chats/')[1]?.split('/')[0] : undefined;
+  console.log('chatId:', chatId);
   const { data: session } = useSession()
   const isHomepage = pathname === '/'
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false)
@@ -61,10 +65,39 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
     }
     // If not on homepage, let the Link component handle navigation normally
   }
+  const handleDownloadZip = async () => {
+    try {
+      if (!chatId) {
+        throw new Error('Chat ID missing in URL');
+      }
+
+      const response = await fetch('/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatId: chatId }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download chat')
+      }
+
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `chat-${chatId}.zip`;
+      link.click();
+    } catch (error) {
+      console.error('Error deleting chat:', error)
+      // You could add a toast notification here
+    } finally {
+    }
+  }
 
   return (
     <div
-      className={`${!isHomepage ? 'border-b border-border dark:border-input' : ''} ${className}`}
+      className={`${!isHomepage ? 'border-b border-border dark:border-input' : 'border-b border-border dark:border-input'} ${className}`}
     >
       {/* Handle search params with Suspense boundary */}
       <Suspense fallback={null}>
@@ -80,20 +113,20 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
               onClick={handleLogoClick}
               className="text-lg font-semibold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300"
             >
-              v0 Clone
+              <img src="/logo.svg" alt="Credera Logo" className="h-8" />
             </Link>
             {/* Hide ChatSelector on mobile */}
             <div className="hidden lg:block">
-              <ChatSelector />
+              {/* <ChatSelector /> */}
             </div>
           </div>
 
           {/* Desktop right side - What's This, GitHub, Deploy, and User */}
           <div className="hidden lg:flex items-center gap-4">
-            <Button
+            {/* <Button
               variant="outline"
               className="py-1.5 px-2 h-fit text-sm"
-              onClick={() => setIsInfoDialogOpen(true)}
+              onClick={() => handleDownloadZip()}
             >
               <Info size={16} />
               What's This?
@@ -111,17 +144,15 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
                 <GitHubIcon size={16} />
                 vercel/v0-sdk
               </Link>
-            </Button>
+            </Button> */}
 
             {/* Deploy with Vercel button - hidden on mobile */}
             <Button
-              className="bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 py-1.5 px-2 h-fit text-sm"
-              asChild
+              className="bg-transparent text-gray-600 dark:bg-zinc-100 hover:bg-orange-600 hover:text-white dark:hover:bg-zinc-200 dark:text-zinc-900 py-1.5 px-2 h-fit text-sm"
+              onClick={() => handleDownloadZip()}
             >
-              <Link href={DEPLOY_URL} target="_blank" rel="noopener noreferrer">
-                <VercelIcon size={16} />
-                Deploy with Vercel
-              </Link>
+              <DownloadIcon size={16} className="mr-1" />
+              Download Components
             </Button>
             <UserNav session={session} />
           </div>
