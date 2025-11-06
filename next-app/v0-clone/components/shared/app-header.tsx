@@ -117,7 +117,7 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
             </Link>
             {/* Hide ChatSelector on mobile */}
             <div className="hidden lg:block">
-              {/* <ChatSelector /> */}
+             <ChatSelector />
             </div>
           </div>
 
