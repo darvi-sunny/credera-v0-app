@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense, FormEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -18,6 +18,7 @@ import {
   loadPromptFromStorage,
   clearPromptFromStorage,
   type ImageAttachment,
+  createImageAttachmentFromSrc,
 } from '@/components/ai-elements/prompt-input'
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion'
 import { AppHeader } from '@/components/shared/app-header'
@@ -49,6 +50,9 @@ function SearchParamsHandler({ onReset }: { onReset: () => void }) {
 
 export function HomeClient() {
   const [message, setMessage] = useState('')
+  const [cardData, setCardData] = useState<Card[] | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const [figmaFileId, setFigmaFileId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showChatInterface, setShowChatInterface] = useState(false)
   const [attachments, setAttachments] = useState<ImageAttachment[]>([])
@@ -95,6 +99,7 @@ export function HomeClient() {
     }, 0)
   }
 
+  useEffect(() => setIsMounted(true), [])
   // Auto-focus the textarea on page load and restore from sessionStorage
   useEffect(() => {
     if (textareaRef.current) {
@@ -136,6 +141,15 @@ export function HomeClient() {
     }
   }
 
+  const handleImageUrls = async (urls: string) => {
+    try {
+      const newAttachments = await createImageAttachmentFromSrc(urls);
+      setAttachments((prev) => [...prev, newAttachments]);
+    } catch (error) {
+      console.error('Error processing image files:', error)
+    }
+  }
+
   const handleRemoveAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((att) => att.id !== id))
   }
@@ -152,8 +166,29 @@ export function HomeClient() {
     setIsDragOver(false)
   }
 
+  const generateScreenshots = async (e?: FormEvent) => {
+    e?.preventDefault();
+    if (!figmaFileId) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/figma/screenshots?fileId=${figmaFileId}`, {
+        method: 'GET',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to generate screenshots');
+      }
+      const data = await response.json();
+      setCardData(data.pages);
+      setIsLoading(false);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+    e.preventDefault();
+
     if (!message.trim() || isLoading) return
 
     const userMessage = message.trim()
@@ -335,6 +370,162 @@ export function HomeClient() {
     })
   }
 
+  interface Card {
+    title: string;
+    description: string;
+    image: string;
+  }
+
+
+  const prompt = `Divide the attached figma design image into multiple pages and components using Next JS and @sitecore-jss/sitecore-jss-nextjs library. 
+Use @sitecore-jss/sitecore-jss-nextjs based components in tsx file and field types for sitecore content editing.
+ 
+Each Component tsx file must follow below rules:
+- preview component tsx files should be in preview folder with default property values and in sitecore folder keep component tsx files it should be pure. 
+- use export const Default function
+- field types should be based on @sitecore-jss/sitecore-jss-nextjs library exmaple(RichTextField, ImageField, Field<string> etc)
+- for array fields use seperate type and use it as an array in parent type example(NavigationItems: NavItem[]).
+- Example field type definitions is below
+	interface NavItem {
+	  id: string
+	  fields: {
+		title: Field<string>
+		link: LinkField
+	  }
+	}
+
+	interface HeaderFields {
+	  logo: ImageField
+	  navigationItems: NavItem[]
+	  loginText: Field<string>
+	  signupText: Field<string>
+	}
+
+	interface HeaderProps {
+	  rendering: ComponentRendering
+	  fields: HeaderFields
+	}
+- replace all "@sitecore-jss/sitecore-jss-nextjs" with "@sitecore-content-sdk/nextjs"
+- preview should be ready without any errors and UI should look same as uploaded image do this as a final check
+
+## Sitecore JSON Template Generation
+ 
+Generate a Sitecore XM Cloud template JSON definition from the given Next.js (.tsx) component(s).
+ 
+**Preferred File Name:** sitecore-template.json
+**Preferred File Location: ** At root of the zip folder
+ 
+Each component and its fields must follow the Sitecore field mapping and output rules below.
+ 
+## Instructions
+ 
+Generate a single valid JSON array where each object represents one Sitecore template.  
+Each template must contain these properties:
+ 
+- **componentName**: Logical Sitecore component name.  
+- **nextJsComponentName**: The exact React/Next.js component name.  
+- **fields**: An array of field definitions, each having 'name', 'type', 'displayName', and 'sampleData'.  
+- **child**: *(Optional)* Array of nested child component templates, if any exist. 
+ 
+If a component contains nested components, embed them inside the "child" property of the parent template.
+ 
+## Sitecore Field Mapping Rules
+ 
+Map Next.js field usage to Sitecore field types using the following rules:
+ 
+| Next.js Usage / Field Type | Sitecore Field Type |
+| :-------------------------- | :------------------ |
+| Short text, titles, labels | Single-Line Text |
+| Long text, paragraphs, descriptions | Rich Text |
+| Images | Image |
+| Arrays, repeated or nested items | Multilist |
+| Buttons, CTAs, URLs | General Link |
+| Form labels, placeholders | Single-Line Text |
+ 
+Use descriptive 'displayName' values and short 'sampleData' examples for better clarity.
+ 
+## Output Format
+ 
+- Output **only valid JSON** — no extra text, markdown, or commentary.  
+- Include all parent and child templates in **one JSON array**.
+  
+- Follow this structure strictly:
+ 
+## EXAMPLE OUTPUT JSON
+ 
+[
+  {
+   "componentName": "PricingCardContainer",
+   "nextJsComponentName": "PricingCardContainer",
+   "fields": [
+     {
+       "name": "sectionTitle",
+       "type": "Single-Line Text",
+       "displayName": "Section Title",
+       "sampleData": "Our Pricing Plans"
+     },
+     {
+       "name": "cards",
+       "type": "Multilist",
+       "displayName": "Cards",
+       "sampleData": ""
+     }
+   ],
+   "child": [
+     {
+       "componentName": "PricingCard",
+       "nextJsComponentName": "PricingCard",
+       "fields": [
+         {
+           "name": "title",
+           "type": "Single-Line Text",
+           "displayName": "Title",
+           "sampleData": "Starter Plan"
+         },
+         {
+           "name": "description",
+           "type": "Rich Text",
+           "displayName": "Description",
+           "sampleData": "Perfect for individuals and small teams."
+         },
+         {
+           "name": "price",
+           "type": "Single-Line Text",
+           "displayName": "Price",
+           "sampleData": "$19/month"
+         }
+       ]
+     }
+   ]
+  }
+]`
+
+  const convertToComponents = async (card: Card) => {
+    console.log('convertToComponents called');
+
+    try {
+      setIsLoading(true);
+
+      // 1️ Wait for image to be added as attachment
+      await handleImageUrls(card.image);
+
+      setMessage(prompt);
+      console.log('Prompt set:', message, prompt);
+
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      setIsLoading(false);
+
+
+      const fakeEvent = { preventDefault: () => { } } as React.FormEvent<HTMLFormElement>;
+      await handleSendMessage(fakeEvent);
+    } catch (error) {
+      console.error('Error in convertToComponents:', error);
+      setIsLoading(false);
+    }
+  };
+
   const handleChatSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!message.trim() || isLoading || !currentChatId) return
@@ -487,7 +678,7 @@ export function HomeClient() {
       <AppHeader />
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 mt-30">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -497,7 +688,42 @@ export function HomeClient() {
 
           {/* Prompt Input */}
           <div className="max-w-2xl mx-auto">
-            <PromptInput
+            <form id="figmaForm" className="bg-white shadow-lg rounded-2xl p-6 ring-1 ring-gray-200" onSubmit={generateScreenshots}>
+              <h1 className="text-2xl font-semibold text-gray-800 mb-4">Figma Converter</h1>
+              <p className="text-sm text-gray-500 mb-6">Enter your figma file Id to get sitecore components.</p>
+
+              <label className="text-sm font-medium text-gray-700 block mb-2">Figma File Id:</label>
+              <div className="relative">
+                <input
+                  id="figmaFileId"
+                  name="figmaFileId"
+                  type="text"
+                  required
+                  placeholder="Figma File Id"
+                  value={figmaFileId}
+                  onChange={(e) => setFigmaFileId(e.target.value)}
+                  className="peer w-full pr-36 rounded-xl border border-gray-200 px-4 py-3 text-gray-700 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                  aria-describedby="emailHelp"
+                />
+                <button
+                  type="submit"
+                  className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white text-sm font-medium shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
+                >
+                  Get Pages Layout
+                </button>
+              </div>
+              <p id="emailHelp" className="mt-2 text-xs text-gray-400">We’ll never share your figma id.</p>
+
+              {/* validation / status */}
+              <p id="errorMsg" className="mt-4 text-sm text-red-600 hidden" role="alert"></p>
+              <div id="successMsg" className="mt-4 hidden rounded-md bg-green-50 px-4 py-3 text-sm text-green-800">
+                Thanks — you’re on the list!
+              </div>
+            </form>
+
+
+
+            {/* <PromptInput
               onSubmit={handleSendMessage}
               className="w-full relative"
               onImageDrop={handleImageFiles}
@@ -543,11 +769,11 @@ export function HomeClient() {
                   />
                 </PromptInputTools>
               </PromptInputToolbar>
-            </PromptInput>
+            </PromptInput> */}
           </div>
 
           {/* Suggestions */}
-          <div className="mt-4 max-w-2xl mx-auto">
+          {/* <div className="mt-4 max-w-2xl mx-auto">
             <Suggestions>
               <Suggestion
                 onClick={() => {
@@ -654,22 +880,66 @@ export function HomeClient() {
                 suggestion="Calculator"
               />
             </Suggestions>
-          </div>
+          </div> */}
 
           {/* Footer */}
-          <div className="mt-8 md:mt-16 text-center text-sm text-muted-foreground">
-            <p>
-              Powered by{' '}
-              <Link
-                href="https://v0-sdk.dev"
-                className="text-foreground hover:underline"
-              >
-                v0 SDK
-              </Link>
-            </p>
-          </div>
+
         </div>
       </div>
-    </div>
+      <div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto" >
+        {isMounted && cardData?.length ? (
+          <h2 className="text-xl sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-white mb-4">
+            Showing Results for Figma Id:
+          </h2>) : <></>}
+      </div>
+      {isMounted && cardData?.length ? (
+        <div className="flex m-auto justify-center gap-8 mb-8 w-[1200px] flex-wrap" suppressHydrationWarning>
+          {cardData?.map((card, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-2xl shadow-md hover:shadow-lg transition w-[250px] flex flex-col overflow-hidden"
+            >
+              {/* Image wrapper */}
+              <div className="w-full h-auto overflow-hidden">
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Footer (sticks to bottom) */}
+              <div className="p-4 flex flex-col flex-grow justify-end">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  {card.title}
+                </h2>
+                <p className="text-gray-500 text-sm mt-1 text-center">
+                  <button onClick={() => {
+                    convertToComponents(card);
+                  }}
+                    className="w-full mt-auto inline-flex justify-center text-center mx-auto items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"
+
+                  >
+                    Convert
+                  </button>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null
+      }
+      <div className="mt-8 md:mt-16 text-center text-sm text-muted-foreground">
+        <p>
+          Powered by{' '}
+          <Link
+            href="https://credera.com"
+            className="text-foreground hover:underline"
+          >
+            CREDERA
+          </Link>
+        </p>
+      </div>
+    </div >
   )
 }
