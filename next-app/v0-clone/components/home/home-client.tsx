@@ -20,7 +20,6 @@ import {
   type ImageAttachment,
   createImageAttachmentFromSrc,
 } from '@/components/ai-elements/prompt-input'
-import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion'
 import { AppHeader } from '@/components/shared/app-header'
 import { ChatMessages } from '@/components/chat/chat-messages'
 import { ChatInput } from '@/components/chat/chat-input'
@@ -75,6 +74,15 @@ export function HomeClient() {
   const [activePanel, setActivePanel] = useState<'chat' | 'preview'>('chat')
   const router = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [showV0Prompt, setshowV0Prompt] = useState(false);
+  const [prompt, setPrompt] = useState('');
+
+  const fetchPrompt = async () => {
+    const res = await fetch('/prompt.txt')
+    if (!res.ok) throw new Error('Failed to fetch prompt')
+    const txt = await res.text()
+    setPrompt(txt)
+  }
 
   const handleReset = () => {
     // Reset all chat-related state
@@ -99,9 +107,12 @@ export function HomeClient() {
     }, 0)
   }
 
-  useEffect(() => setIsMounted(true), [])
+  useEffect(() =>
+    setIsMounted(true), []
+  )
   // Auto-focus the textarea on page load and restore from sessionStorage
   useEffect(() => {
+    fetchPrompt()
     if (textareaRef.current) {
       textareaRef.current.focus()
     }
@@ -376,130 +387,6 @@ export function HomeClient() {
     image: string;
   }
 
-
-  const prompt = `Divide the attached figma design image into multiple pages and components using Next JS and @sitecore-jss/sitecore-jss-nextjs library. 
-Use @sitecore-jss/sitecore-jss-nextjs based components in tsx file and field types for sitecore content editing.
- 
-Each Component tsx file must follow below rules:
-- preview component tsx files should be in preview folder with default property values and in sitecore folder keep component tsx files it should be pure. 
-- use export const Default function
-- field types should be based on @sitecore-jss/sitecore-jss-nextjs library exmaple(RichTextField, ImageField, Field<string> etc)
-- for array fields use seperate type and use it as an array in parent type example(NavigationItems: NavItem[]).
-- Example field type definitions is below
-	interface NavItem {
-	  id: string
-	  fields: {
-		title: Field<string>
-		link: LinkField
-	  }
-	}
-
-	interface HeaderFields {
-	  logo: ImageField
-	  navigationItems: NavItem[]
-	  loginText: Field<string>
-	  signupText: Field<string>
-	}
-
-	interface HeaderProps {
-	  rendering: ComponentRendering
-	  fields: HeaderFields
-	}
-- replace all "@sitecore-jss/sitecore-jss-nextjs" with "@sitecore-content-sdk/nextjs"
-- preview should be ready without any errors and UI should look same as uploaded image do this as a final check
-
-## Sitecore JSON Template Generation
- 
-Generate a Sitecore XM Cloud template JSON definition from the given Next.js (.tsx) component(s).
- 
-**Preferred File Name:** sitecore-template.json
-**Preferred File Location: ** At root of the zip folder
- 
-Each component and its fields must follow the Sitecore field mapping and output rules below.
- 
-## Instructions
- 
-Generate a single valid JSON array where each object represents one Sitecore template.  
-Each template must contain these properties:
- 
-- **componentName**: Logical Sitecore component name.  
-- **nextJsComponentName**: The exact React/Next.js component name.  
-- **fields**: An array of field definitions, each having 'name', 'type', 'displayName', and 'sampleData'.  
-- **child**: *(Optional)* Array of nested child component templates, if any exist. 
- 
-If a component contains nested components, embed them inside the "child" property of the parent template.
- 
-## Sitecore Field Mapping Rules
- 
-Map Next.js field usage to Sitecore field types using the following rules:
- 
-| Next.js Usage / Field Type | Sitecore Field Type |
-| :-------------------------- | :------------------ |
-| Short text, titles, labels | Single-Line Text |
-| Long text, paragraphs, descriptions | Rich Text |
-| Images | Image |
-| Arrays, repeated or nested items | Multilist |
-| Buttons, CTAs, URLs | General Link |
-| Form labels, placeholders | Single-Line Text |
- 
-Use descriptive 'displayName' values and short 'sampleData' examples for better clarity.
- 
-## Output Format
- 
-- Output **only valid JSON** — no extra text, markdown, or commentary.  
-- Include all parent and child templates in **one JSON array**.
-  
-- Follow this structure strictly:
- 
-## EXAMPLE OUTPUT JSON
- 
-[
-  {
-   "componentName": "PricingCardContainer",
-   "nextJsComponentName": "PricingCardContainer",
-   "fields": [
-     {
-       "name": "sectionTitle",
-       "type": "Single-Line Text",
-       "displayName": "Section Title",
-       "sampleData": "Our Pricing Plans"
-     },
-     {
-       "name": "cards",
-       "type": "Multilist",
-       "displayName": "Cards",
-       "sampleData": ""
-     }
-   ],
-   "child": [
-     {
-       "componentName": "PricingCard",
-       "nextJsComponentName": "PricingCard",
-       "fields": [
-         {
-           "name": "title",
-           "type": "Single-Line Text",
-           "displayName": "Title",
-           "sampleData": "Starter Plan"
-         },
-         {
-           "name": "description",
-           "type": "Rich Text",
-           "displayName": "Description",
-           "sampleData": "Perfect for individuals and small teams."
-         },
-         {
-           "name": "price",
-           "type": "Single-Line Text",
-           "displayName": "Price",
-           "sampleData": "$19/month"
-         }
-       ]
-     }
-   ]
-  }
-]`
-
   const convertToComponents = async (card: Card) => {
     console.log('convertToComponents called');
 
@@ -510,8 +397,6 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
       await handleImageUrls(card.image);
 
       setMessage(prompt);
-      console.log('Prompt set:', message, prompt);
-
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -519,7 +404,8 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
 
 
       const fakeEvent = { preventDefault: () => { } } as React.FormEvent<HTMLFormElement>;
-      await handleSendMessage(fakeEvent);
+      setshowV0Prompt(true);
+      // await handleSendMessage(fakeEvent);
     } catch (error) {
       console.error('Error in convertToComponents:', error);
       setIsLoading(false);
@@ -670,11 +556,9 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col">
-      {/* Handle search params with Suspense boundary */}
       <Suspense fallback={null}>
         <SearchParamsHandler onReset={handleReset} />
       </Suspense>
-
       <AppHeader />
 
       {/* Main Content */}
@@ -682,15 +566,14 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              What can we build together?
+              Figma to Sitecore
             </h2>
           </div>
 
-          {/* Prompt Input */}
-          <div className="max-w-2xl mx-auto">
+          {!showV0Prompt && (<div className="max-w-2xl mx-auto">
             <form id="figmaForm" className="bg-white shadow-lg rounded-2xl p-6 ring-1 ring-gray-200" onSubmit={generateScreenshots}>
-              <h1 className="text-2xl font-semibold text-gray-800 mb-4">Figma Converter</h1>
-              <p className="text-sm text-gray-500 mb-6">Enter your figma file Id to get sitecore components.</p>
+              {/* <h1 className="text-2xl font-semibold text-gray-800 mb-4">Figma Converter</h1> */}
+              <p className="text-sm text-gray-500 mb-6">Enter your figma file Id to fetch designs</p>
 
               <label className="text-sm font-medium text-gray-700 block mb-2">Figma File Id:</label>
               <div className="relative">
@@ -709,7 +592,7 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
                   type="submit"
                   className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white text-sm font-medium shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
                 >
-                  Get Pages Layout
+                  {isLoading ? 'Fetching...' : ' Get Pages'}     
                 </button>
               </div>
               <p id="emailHelp" className="mt-2 text-xs text-gray-400">We’ll never share your figma id.</p>
@@ -720,10 +603,10 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
                 Thanks — you’re on the list!
               </div>
             </form>
+          </div>)}
 
-
-
-            {/* <PromptInput
+          {showV0Prompt && (<div className="max-w-2xl mx-auto">
+            <PromptInput
               onSubmit={handleSendMessage}
               className="w-full relative"
               onImageDrop={handleImageFiles}
@@ -769,130 +652,19 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
                   />
                 </PromptInputTools>
               </PromptInputToolbar>
-            </PromptInput> */}
-          </div>
-
-          {/* Suggestions */}
-          {/* <div className="mt-4 max-w-2xl mx-auto">
-            <Suggestions>
-              <Suggestion
-                onClick={() => {
-                  setMessage('Landing page')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Landing page"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('Todo app')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Todo app"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('Dashboard')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Dashboard"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('Blog')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Blog"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('E-commerce')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="E-commerce"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('Portfolio')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Portfolio"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('Chat app')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Chat app"
-              />
-              <Suggestion
-                onClick={() => {
-                  setMessage('Calculator')
-                  // Submit after setting message
-                  setTimeout(() => {
-                    const form = textareaRef.current?.form
-                    if (form) {
-                      form.requestSubmit()
-                    }
-                  }, 0)
-                }}
-                suggestion="Calculator"
-              />
-            </Suggestions>
-          </div> */}
-
-          {/* Footer */}
+            </PromptInput>
+          </div>)}
 
         </div>
       </div>
-      <div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto" >
+      {!showV0Prompt && (<div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto" >
         {isMounted && cardData?.length ? (
           <h2 className="text-xl sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-white mb-4">
-            Showing Results for Figma Id:
+            Showing Results for Figma Id: {figmaFileId}
           </h2>) : <></>}
-      </div>
-      {isMounted && cardData?.length ? (
+      </div>)}
+
+      {isMounted && cardData?.length && !showV0Prompt ? (
         <div className="flex m-auto justify-center gap-8 mb-8 w-[1200px] flex-wrap" suppressHydrationWarning>
           {cardData?.map((card, index) => (
             <div
@@ -918,9 +690,8 @@ Use descriptive 'displayName' values and short 'sampleData' examples for better 
                     convertToComponents(card);
                   }}
                     className="w-full mt-auto inline-flex justify-center text-center mx-auto items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"
-
                   >
-                    Convert
+                   {isLoading ? 'Converting...' : 'Convert'}  
                   </button>
                 </p>
               </div>
