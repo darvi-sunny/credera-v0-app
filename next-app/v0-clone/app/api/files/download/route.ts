@@ -16,20 +16,25 @@ function toBuffer(data: unknown): Buffer {
   }
   if (data instanceof ArrayBuffer) return Buffer.from(data)
   if (typeof data === 'string') return Buffer.from(data, 'utf-8')
-  throw new Error('Unsupported data type returned from v0.chats.downloadVersion()')
+  throw new Error(
+    'Unsupported data type returned from v0.chats.downloadVersion()',
+  )
 }
 
 /**
  * Generates a unique file path by appending a number if the file already exists.
  * Example: chat-abc.zip -> chat-abc-2.zip, chat-abc-3.zip, etc.
  */
-async function generateUniqueFilePath(outDir: string, baseFilename: string): Promise<string> {
+async function generateUniqueFilePath(
+  outDir: string,
+  baseFilename: string,
+): Promise<string> {
   const ext = path.extname(baseFilename) // .zip
   const baseName = path.basename(baseFilename, ext) // chat-hJemKxMzbgc-vb_esMMSmrX0pV-v123
   const files = await fs.readdir(outDir)
 
   // Count all files that start with the same base name
-  const similarFiles = files.filter(file => file.startsWith(baseName))
+  const similarFiles = files.filter((file) => file.startsWith(baseName))
   const count = similarFiles.length
 
   // If no existing file, just return the base file path
@@ -53,17 +58,26 @@ export async function POST(request: NextRequest) {
     const meta = await v0.chats.getById({ chatId })
     const versionId = meta.latestVersion?.id
     if (!versionId) {
-      return NextResponse.json({ error: 'No version found for chat' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'No version found for chat' },
+        { status: 404 },
+      )
     }
 
     // 2️ - Download raw data
-    const raw = (await v0.chats.downloadVersion({ chatId, versionId })) as unknown
+    const raw = (await v0.chats.downloadVersion({
+      chatId,
+      versionId,
+    })) as unknown
     const items: unknown[] = Array.isArray(raw) ? raw : [raw]
     const buffers = items.map(toBuffer)
     const zipBuffer = Buffer.concat(buffers)
 
     // 3️ - Prepare output folder
-    const outDir = process.env.VERCEL || isView ? path.join(process.cwd(), 'downloads', 'tmp') : path.join(process.cwd(), 'downloads')
+    const outDir =
+      process.env.VERCEL || isView
+        ? path.join(process.cwd(), 'downloads', 'tmp')
+        : path.join(process.cwd(), 'downloads')
     await fs.mkdir(outDir, { recursive: true })
 
     // 4️ - Generate unique filename if exists

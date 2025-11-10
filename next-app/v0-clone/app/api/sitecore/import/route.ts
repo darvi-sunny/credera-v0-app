@@ -1,75 +1,81 @@
 // app/api/sitecore-import/route.ts
-import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
+import { NextResponse } from 'next/server'
+import fs from 'fs/promises'
+import path from 'path'
+import { existsSync } from 'fs'
 
-import { createFromJson, SitecoreTemplateDefinition } from "@/lib/sitecore-import";
+import {
+  createFromJson,
+  SitecoreTemplateDefinition,
+} from '@/lib/sitecore-import'
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*", // change to specific origin in production
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+  'Access-Control-Allow-Origin': '*', // change to specific origin in production
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
 
 export function OPTIONS() {
   // Respond to browser preflight requests
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
 }
 
 export async function POST(request: Request) {
   try {
     // Try to parse JSON body
-    let body: any;
+    let body: any
     try {
-      body = await request.json();
+      body = await request.json()
     } catch (e) {
       return NextResponse.json(
-        { error: "Invalid JSON in request body." },
-        { status: 400, headers: CORS_HEADERS }
-      );
+        { error: 'Invalid JSON in request body.' },
+        { status: 400, headers: CORS_HEADERS },
+      )
     }
 
-    const filePath = body?.filePath;
-    if (!filePath || typeof filePath !== "string") {
+    const filePath = body?.filePath
+    if (!filePath || typeof filePath !== 'string') {
       return NextResponse.json(
-        { error: "Invalid or missing filePath in request body." },
-        { status: 400, headers: CORS_HEADERS }
-      );
+        { error: 'Invalid or missing filePath in request body.' },
+        { status: 400, headers: CORS_HEADERS },
+      )
     }
 
     // Resolve path relative to project root (process.cwd())
-    const resolvedPath = path.resolve(process.cwd(), filePath, "sitecore-template.json");
-    console.log("Resolved file path:", resolvedPath);
+    const resolvedPath = path.resolve(
+      process.cwd(),
+      filePath,
+      'sitecore-template.json',
+    )
+    console.log('Resolved file path:', resolvedPath)
 
     if (!existsSync(resolvedPath)) {
       return NextResponse.json(
         { error: `File not found at ${resolvedPath}` },
-        { status: 404, headers: CORS_HEADERS }
-      );
+        { status: 404, headers: CORS_HEADERS },
+      )
     }
 
-    const fileContents = await fs.readFile(resolvedPath, "utf8");
-
+    const fileContents = await fs.readFile(resolvedPath, 'utf8')
 
     // parse file as JSON
-    let parsed;
+    let parsed
     try {
-      parsed = JSON.parse(fileContents);      
-      createFromJson(parsed as SitecoreTemplateDefinition[]);
+      parsed = JSON.parse(fileContents)
+      createFromJson(parsed as SitecoreTemplateDefinition[])
     } catch (e) {
       return NextResponse.json(
-        { error: "File exists but is not valid JSON." },
-        { status: 500, headers: CORS_HEADERS }
-      );
+        { error: 'File exists but is not valid JSON.' },
+        { status: 500, headers: CORS_HEADERS },
+      )
     }
 
-    return NextResponse.json(parsed, { status: 200, headers: CORS_HEADERS });
+    return NextResponse.json(parsed, { status: 200, headers: CORS_HEADERS })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
       { error: `Unexpected server error: ${message}` },
-      { status: 500, headers: CORS_HEADERS }
-    );
+      { status: 500, headers: CORS_HEADERS },
+    )
   }
 }

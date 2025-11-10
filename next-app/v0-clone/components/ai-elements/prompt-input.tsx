@@ -37,8 +37,6 @@ export const fileToDataUrl = (file: File): Promise<string> => {
   })
 }
 
-
-
 // Utility function to create image attachment
 export const createImageAttachment = async (
   file: File,
@@ -52,16 +50,14 @@ export const createImageAttachment = async (
   }
 }
 
-
 // Utility function to create image attachment
 export const createImageAttachmentFromSrc = async (
   imageURL: string,
 ): Promise<ImageAttachment> => {
-
-  const proxyUrl = `/api/figma/proxyimage?url=${encodeURIComponent(imageURL)}`;
-  const response = await fetch(proxyUrl);
-  const blob = await response.blob();
-  const dataUrl = await fileToDataUrl(blob as File);
+  const proxyUrl = `/api/figma/proxyimage?url=${encodeURIComponent(imageURL)}`
+  const response = await fetch(proxyUrl)
+  const blob = await response.blob()
+  const dataUrl = await fileToDataUrl(blob as File)
   return {
     id: Math.random().toString(36).substr(2, 9),
     file: blob as File,
@@ -500,7 +496,7 @@ export const PromptInputMicButton = ({
       className={cn(
         'transition-colors',
         isListening &&
-        'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30',
+          'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30',
         className,
       )}
       onClick={toggleListening}

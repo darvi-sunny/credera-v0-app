@@ -32,6 +32,7 @@ ImageField
 Field<string>
 
 Replace all imports from "@sitecore-jss/sitecore-jss-nextjs" with "@sitecore-content-sdk/nextjs".
+Import ComponentRendering from "@sitecore-content-sdk/nextjs"
 
 Define array fields using a separate interface, e.g.:
 
