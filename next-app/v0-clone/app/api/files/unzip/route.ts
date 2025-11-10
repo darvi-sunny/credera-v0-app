@@ -13,7 +13,10 @@ export async function POST(req: Request) {
   try {
     body = await req.json()
   } catch (e) {
-    return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 })
+    return NextResponse.json(
+      { success: false, error: 'Invalid JSON body' },
+      { status: 400 },
+    )
   }
 
   const { filePath } = body ?? {}
@@ -48,7 +51,10 @@ export async function POST(req: Request) {
     )
   } catch (err: any) {
     console.error('unzip error:', err)
-    return NextResponse.json({ success: false, error: err?.message || 'Operation failed' }, { status: 400 })
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Operation failed' },
+      { status: 400 },
+    )
   }
 }
 

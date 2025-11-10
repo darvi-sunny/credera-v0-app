@@ -74,8 +74,8 @@ export function HomeClient() {
   const [activePanel, setActivePanel] = useState<'chat' | 'preview'>('chat')
   const router = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [showV0Prompt, setshowV0Prompt] = useState(false);
-  const [prompt, setPrompt] = useState('');
+  const [showV0Prompt, setshowV0Prompt] = useState(false)
+  const [prompt, setPrompt] = useState('')
 
   const fetchPrompt = async () => {
     const res = await fetch('/prompt.txt')
@@ -107,9 +107,7 @@ export function HomeClient() {
     }, 0)
   }
 
-  useEffect(() =>
-    setIsMounted(true), []
-  )
+  useEffect(() => setIsMounted(true), [])
   // Auto-focus the textarea on page load and restore from sessionStorage
   useEffect(() => {
     fetchPrompt()
@@ -154,8 +152,8 @@ export function HomeClient() {
 
   const handleImageUrls = async (urls: string) => {
     try {
-      const newAttachments = await createImageAttachmentFromSrc(urls);
-      setAttachments((prev) => [...prev, newAttachments]);
+      const newAttachments = await createImageAttachmentFromSrc(urls)
+      setAttachments((prev) => [...prev, newAttachments])
     } catch (error) {
       console.error('Error processing image files:', error)
     }
@@ -178,27 +176,30 @@ export function HomeClient() {
   }
 
   const generateScreenshots = async (e?: FormEvent) => {
-    e?.preventDefault();
-    if (!figmaFileId) return;
+    e?.preventDefault()
+    if (!figmaFileId) return
 
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      const response = await fetch(`/api/figma/screenshots?fileId=${figmaFileId}`, {
-        method: 'GET',
-      });
+      const response = await fetch(
+        `/api/figma/screenshots?fileId=${figmaFileId}`,
+        {
+          method: 'GET',
+        },
+      )
       if (!response.ok) {
-        throw new Error('Failed to generate screenshots');
+        throw new Error('Failed to generate screenshots')
       }
-      const data = await response.json();
-      setCardData(data.pages);
-      setIsLoading(false);
+      const data = await response.json()
+      setCardData(data.pages)
+      setIsLoading(false)
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
   }
 
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!message.trim() || isLoading) return
 
@@ -382,35 +383,36 @@ export function HomeClient() {
   }
 
   interface Card {
-    title: string;
-    description: string;
-    image: string;
+    title: string
+    description: string
+    image: string
   }
 
   const convertToComponents = async (card: Card) => {
-    console.log('convertToComponents called');
+    console.log('convertToComponents called')
 
     try {
-      setIsLoading(true);
+      setIsLoading(true)
 
       // 1️ Wait for image to be added as attachment
-      await handleImageUrls(card.image);
+      await handleImageUrls(card.image)
 
-      setMessage(prompt);
+      setMessage(prompt)
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      setIsLoading(false);
+      setIsLoading(false)
 
-
-      const fakeEvent = { preventDefault: () => { } } as React.FormEvent<HTMLFormElement>;
-      setshowV0Prompt(true);
+      const fakeEvent = {
+        preventDefault: () => {},
+      } as React.FormEvent<HTMLFormElement>
+      setshowV0Prompt(true)
       // await handleSendMessage(fakeEvent);
     } catch (error) {
-      console.error('Error in convertToComponents:', error);
-      setIsLoading(false);
+      console.error('Error in convertToComponents:', error)
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleChatSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -570,102 +572,130 @@ export function HomeClient() {
             </h2>
           </div>
 
-          {!showV0Prompt && (<div className="max-w-2xl mx-auto">
-            <form id="figmaForm" className="bg-white shadow-lg rounded-2xl p-6 ring-1 ring-gray-200" onSubmit={generateScreenshots}>
-              {/* <h1 className="text-2xl font-semibold text-gray-800 mb-4">Figma Converter</h1> */}
-              <p className="text-sm text-gray-500 mb-6">Enter your figma file Id to fetch designs</p>
+          {!showV0Prompt && (
+            <div className="max-w-2xl mx-auto">
+              <form
+                id="figmaForm"
+                className="bg-white shadow-lg rounded-2xl p-6 ring-1 ring-gray-200"
+                onSubmit={generateScreenshots}
+              >
+                {/* <h1 className="text-2xl font-semibold text-gray-800 mb-4">Figma Converter</h1> */}
+                <p className="text-sm text-gray-500 mb-6">
+                  Enter your figma file Id to fetch designs
+                </p>
 
-              <label className="text-sm font-medium text-gray-700 block mb-2">Figma File Id:</label>
-              <div className="relative">
-                <input
-                  id="figmaFileId"
-                  name="figmaFileId"
-                  type="text"
-                  required
-                  placeholder="Figma File Id"
-                  value={figmaFileId}
-                  onChange={(e) => setFigmaFileId(e.target.value)}
-                  className="peer w-full pr-36 rounded-xl border border-gray-200 px-4 py-3 text-gray-700 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
-                  aria-describedby="emailHelp"
-                />
-                <button
-                  type="submit"
-                  className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white text-sm font-medium shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
+                <label className="text-sm font-medium text-gray-700 block mb-2">
+                  Figma File Id:
+                </label>
+                <div className="relative">
+                  <input
+                    id="figmaFileId"
+                    name="figmaFileId"
+                    type="text"
+                    required
+                    placeholder="Figma File Id"
+                    value={figmaFileId}
+                    onChange={(e) => setFigmaFileId(e.target.value)}
+                    className="peer w-full pr-36 rounded-xl border border-gray-200 px-4 py-3 text-gray-700 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                    aria-describedby="emailHelp"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white text-sm font-medium shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
+                  >
+                    {isLoading ? 'Fetching...' : ' Get Pages'}
+                  </button>
+                </div>
+                <p id="emailHelp" className="mt-2 text-xs text-gray-400">
+                  We’ll never share your figma id.
+                </p>
+
+                {/* validation / status */}
+                <p
+                  id="errorMsg"
+                  className="mt-4 text-sm text-red-600 hidden"
+                  role="alert"
+                ></p>
+                <div
+                  id="successMsg"
+                  className="mt-4 hidden rounded-md bg-green-50 px-4 py-3 text-sm text-green-800"
                 >
-                  {isLoading ? 'Fetching...' : ' Get Pages'}     
-                </button>
-              </div>
-              <p id="emailHelp" className="mt-2 text-xs text-gray-400">We’ll never share your figma id.</p>
+                  Thanks — you’re on the list!
+                </div>
+              </form>
+            </div>
+          )}
 
-              {/* validation / status */}
-              <p id="errorMsg" className="mt-4 text-sm text-red-600 hidden" role="alert"></p>
-              <div id="successMsg" className="mt-4 hidden rounded-md bg-green-50 px-4 py-3 text-sm text-green-800">
-                Thanks — you’re on the list!
-              </div>
-            </form>
-          </div>)}
-
-          {showV0Prompt && (<div className="max-w-2xl mx-auto">
-            <PromptInput
-              onSubmit={handleSendMessage}
-              className="w-full relative"
-              onImageDrop={handleImageFiles}
-              isDragOver={isDragOver}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <PromptInputImagePreview
-                attachments={attachments}
-                onRemove={handleRemoveAttachment}
-              />
-              <PromptInputTextarea
-                ref={textareaRef}
-                onChange={(e) => setMessage(e.target.value)}
-                value={message}
-                placeholder="Describe what you want to build..."
-                className="min-h-[80px] text-base"
-                disabled={isLoading}
-              />
-              <PromptInputToolbar>
-                <PromptInputTools>
-                  <PromptInputImageButton
-                    onImageSelect={handleImageFiles}
-                    disabled={isLoading}
-                  />
-                </PromptInputTools>
-                <PromptInputTools>
-                  <PromptInputMicButton
-                    onTranscript={(transcript) => {
-                      setMessage(
-                        (prev) => prev + (prev ? ' ' : '') + transcript,
-                      )
-                    }}
-                    onError={(error) => {
-                      console.error('Speech recognition error:', error)
-                    }}
-                    disabled={isLoading}
-                  />
-                  <PromptInputSubmit
-                    disabled={!message.trim() || isLoading}
-                    status={isLoading ? 'streaming' : 'ready'}
-                  />
-                </PromptInputTools>
-              </PromptInputToolbar>
-            </PromptInput>
-          </div>)}
-
+          {showV0Prompt && (
+            <div className="max-w-2xl mx-auto">
+              <PromptInput
+                onSubmit={handleSendMessage}
+                className="w-full relative"
+                onImageDrop={handleImageFiles}
+                isDragOver={isDragOver}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <PromptInputImagePreview
+                  attachments={attachments}
+                  onRemove={handleRemoveAttachment}
+                />
+                <PromptInputTextarea
+                  ref={textareaRef}
+                  onChange={(e) => setMessage(e.target.value)}
+                  value={message}
+                  placeholder="Describe what you want to build..."
+                  className="min-h-[80px] text-base"
+                  disabled={isLoading}
+                />
+                <PromptInputToolbar>
+                  <PromptInputTools>
+                    <PromptInputImageButton
+                      onImageSelect={handleImageFiles}
+                      disabled={isLoading}
+                    />
+                  </PromptInputTools>
+                  <PromptInputTools>
+                    <PromptInputMicButton
+                      onTranscript={(transcript) => {
+                        setMessage(
+                          (prev) => prev + (prev ? ' ' : '') + transcript,
+                        )
+                      }}
+                      onError={(error) => {
+                        console.error('Speech recognition error:', error)
+                      }}
+                      disabled={isLoading}
+                    />
+                    <PromptInputSubmit
+                      disabled={!message.trim() || isLoading}
+                      status={isLoading ? 'streaming' : 'ready'}
+                    />
+                  </PromptInputTools>
+                </PromptInputToolbar>
+              </PromptInput>
+            </div>
+          )}
         </div>
       </div>
-      {!showV0Prompt && (<div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto" >
-        {isMounted && cardData?.length ? (
-          <h2 className="text-xl sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-white mb-4">
-            Showing Results for Figma Id: {figmaFileId}
-          </h2>) : <></>}
-      </div>)}
+      {!showV0Prompt && (
+        <div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto">
+          {isMounted && cardData?.length ? (
+            <h2 className="text-xl sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-white mb-4">
+              Showing Results for Figma Id: {figmaFileId}
+            </h2>
+          ) : (
+            <></>
+          )}
+        </div>
+      )}
 
       {isMounted && cardData?.length && !showV0Prompt ? (
-        <div className="flex m-auto justify-center gap-8 mb-8 w-[1200px] flex-wrap" suppressHydrationWarning>
+        <div
+          className="flex m-auto justify-center gap-8 mb-8 w-[1200px] flex-wrap"
+          suppressHydrationWarning
+        >
           {cardData?.map((card, index) => (
             <div
               key={index}
@@ -686,20 +716,20 @@ export function HomeClient() {
                   {card.title}
                 </h2>
                 <p className="text-gray-500 text-sm mt-1 text-center">
-                  <button onClick={() => {
-                    convertToComponents(card);
-                  }}
+                  <button
+                    onClick={() => {
+                      convertToComponents(card)
+                    }}
                     className="w-full mt-auto inline-flex justify-center text-center mx-auto items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"
                   >
-                   {isLoading ? 'Converting...' : 'Convert'}  
+                    {isLoading ? 'Converting...' : 'Convert'}
                   </button>
                 </p>
               </div>
             </div>
           ))}
         </div>
-      ) : null
-      }
+      ) : null}
       <div className="mt-8 md:mt-16 text-center text-sm text-muted-foreground">
         <p>
           Powered by{' '}
@@ -711,6 +741,6 @@ export function HomeClient() {
           </Link>
         </p>
       </div>
-    </div >
+    </div>
   )
 }

@@ -9,7 +9,10 @@ export async function POST(req: Request) {
 
     // Check if folder exists
     if (!fs.existsSync(downloadsDir)) {
-      return NextResponse.json({ message: 'Downloads folder not found.' }, { status: 404 })
+      return NextResponse.json(
+        { message: 'Downloads folder not found.' },
+        { status: 404 },
+      )
     }
     console.log('Cleaning downloads folder at:', downloadsDir)
 
@@ -28,9 +31,15 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, message: 'Downloads folder cleaned successfully.' })
+    return NextResponse.json({
+      ok: true,
+      message: 'Downloads folder cleaned successfully.',
+    })
   } catch (error) {
     console.error('Error cleaning downloads folder:', error)
-    return NextResponse.json({ ok: false, error: 'Failed to clean downloads folder.' }, { status: 500 })
+    return NextResponse.json(
+      { ok: false, error: 'Failed to clean downloads folder.' },
+      { status: 500 },
+    )
   }
 }
