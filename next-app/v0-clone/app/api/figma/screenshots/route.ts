@@ -6,10 +6,18 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const figmaFileId = searchParams.get('fileId')
+  const figmaNodeId = searchParams.get('nodeId')
 
   if (!figmaFileId) {
     return NextResponse.json(
       { error: 'Missing fileId query parameter' },
+      { status: 400 },
+    )
+  }
+
+  if (!figmaNodeId) {
+    return NextResponse.json(
+      { error: 'Missing nodeId query parameter' },
       { status: 400 },
     )
   }
@@ -33,9 +41,8 @@ export async function GET(req: Request) {
   }))
 
   // 2️⃣ Get image URLs for each page
-  const ids = pages.map((p: any) => p.id).join(',')
   const imageRes = await fetch(
-    `${FIGMA_URL}/images/${figmaFileId}?ids=${ids}&format=png&scale=0.25`,
+    `${FIGMA_URL}/images/${figmaFileId}?ids=${figmaNodeId}&format=png&scale=0.40`,
     { headers: { 'X-Figma-Token': FIGMA_TOKEN } },
   )
 
