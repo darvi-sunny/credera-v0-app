@@ -26,24 +26,23 @@ import { ChatInput } from '@/components/chat/chat-input'
 import { PreviewPanel } from '@/components/chat/preview-panel'
 import { ResizableLayout } from '@/components/shared/resizable-layout'
 import { BottomToolbar } from '@/components/shared/bottom-toolbar'
+import { extractFigmaIds } from '@/lib/figma'
 
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function SearchParamsHandler({ onReset }: { onReset: () => void }) {
   const searchParams = useSearchParams()
 
-  // Reset UI when reset parameter is present
   useEffect(() => {
     const reset = searchParams.get('reset')
     if (reset === 'true') {
-      onReset()
+      onReset() // 🔹 Run only once
 
-      // Remove the reset parameter from URL without triggering navigation
+      // Clean up URL so it won’t trigger again
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('reset')
       window.history.replaceState({}, '', newUrl.pathname)
     }
-  }, [searchParams, onReset])
-
+  }, []) // ✅ empty dependency array
   return null
 }
 
@@ -51,7 +50,7 @@ export function HomeClient() {
   const [message, setMessage] = useState('')
   const [cardData, setCardData] = useState<Card[] | null>(null)
   const [isMounted, setIsMounted] = useState(false)
-  const [figmaFileId, setFigmaFileId] = useState('')
+  const [figmaFileURL, setFigmaFileURL] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showChatInterface, setShowChatInterface] = useState(false)
   const [attachments, setAttachments] = useState<ImageAttachment[]>([])
@@ -177,12 +176,13 @@ export function HomeClient() {
 
   const generateScreenshots = async (e?: FormEvent) => {
     e?.preventDefault()
-    if (!figmaFileId) return
+    if (!figmaFileURL) return
+    const result = extractFigmaIds(figmaFileURL)
 
     setIsLoading(true)
     try {
       const response = await fetch(
-        `/api/figma/screenshots?fileId=${figmaFileId}`,
+        `/api/figma/screenshots?fileId=${result?.fileId}&nodeId=${result?.nodeId}`,
         {
           method: 'GET',
         },
@@ -193,6 +193,7 @@ export function HomeClient() {
       const data = await response.json()
       setCardData(data.pages)
       setIsLoading(false)
+      convertToComponents(data?.pages[0])
     } catch (error) {
       console.error(error)
     }
@@ -564,131 +565,163 @@ export function HomeClient() {
       <AppHeader />
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 mt-30">
-        <div className="max-w-4xl w-full">
-          <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Figma to Sitecore
-            </h2>
-          </div>
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-98px)] overflow-hidden bg-gray-50 dark:bg-black">
+        {/* LEFT SIDE — FORM */}
+        <div
+          className={`w-full  ${showV0Prompt ? 'lg:w-3/4' : ''}  flex flex-col justify-between px-4 sm:px-6 lg:px-8 overflow-hidden`}
+        >
+          <div className="flex-1 flex flex-col justify-center items-center">
+            <div className="max-w-3xl w-full">
+              <div className=" mb-8 md:mb-12 text-center">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                  Figma to Sitecore
+                </h2>
+              </div>
 
-          {!showV0Prompt && (
-            <div className="max-w-2xl mx-auto">
               <form
                 id="figmaForm"
                 className="bg-white shadow-lg rounded-2xl p-6 ring-1 ring-gray-200"
                 onSubmit={generateScreenshots}
               >
-                {/* <h1 className="text-2xl font-semibold text-gray-800 mb-4">Figma Converter</h1> */}
                 <p className="text-sm text-gray-500 mb-6">
-                  Enter your figma file Id to fetch designs
+                  Enter your Figma file URL to fetch designs
                 </p>
 
                 <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Figma File Id:
+                  Figma File URL:
                 </label>
                 <div className="relative">
                   <input
-                    id="figmaFileId"
-                    name="figmaFileId"
+                    id="figmaFileURL"
+                    name="figmaFileURL"
                     type="text"
                     required
-                    placeholder="Figma File Id"
-                    value={figmaFileId}
-                    onChange={(e) => setFigmaFileId(e.target.value)}
+                    placeholder="Figma File URL"
+                    value={figmaFileURL}
+                    onChange={(e) => setFigmaFileURL(e.target.value)}
                     className="peer w-full pr-36 rounded-xl border border-gray-200 px-4 py-3 text-gray-700 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
-                    aria-describedby="emailHelp"
                   />
                   <button
                     type="submit"
-                    className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white text-sm font-medium shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-60"
+                    className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-white text-sm font-medium shadow-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:opacity-60"
                   >
-                    {isLoading ? 'Fetching...' : ' Get Pages'}
+                    {isLoading ? 'Fetching...' : 'Get Screens'}
                   </button>
                 </div>
                 <p id="emailHelp" className="mt-2 text-xs text-gray-400">
-                  We’ll never share your figma id.
+                  We’ll never share your Figma URL with anyone.
                 </p>
-
-                {/* validation / status */}
-                <p
-                  id="errorMsg"
-                  className="mt-4 text-sm text-red-600 hidden"
-                  role="alert"
-                ></p>
-                <div
-                  id="successMsg"
-                  className="mt-4 hidden rounded-md bg-green-50 px-4 py-3 text-sm text-green-800"
-                >
-                  Thanks — you’re on the list!
-                </div>
               </form>
+              <div className="mt-4 mb-8 md:mb-12 flex justify-between">
+                <img className="w-10" src="./figma.png"></img>
+                <img className="w-50" src="./sitecoreai.jpg"></img>
+              </div>
             </div>
-          )}
+          </div>
 
-          {showV0Prompt && (
-            <div className="max-w-2xl mx-auto">
-              <PromptInput
-                onSubmit={handleSendMessage}
-                className="w-full relative"
-                onImageDrop={handleImageFiles}
-                isDragOver={isDragOver}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+          <div className="mt-8 mb-4 text-center text-sm text-muted-foreground">
+            <p>
+              Powered by{' '}
+              <Link
+                href="https://credera.com"
+                className="text-foreground hover:underline"
               >
-                <PromptInputImagePreview
-                  attachments={attachments}
-                  onRemove={handleRemoveAttachment}
+                CREDERA
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT SIDE — PREVIEW PANEL */}
+
+        <div
+          className={`w-full ${showV0Prompt ? 'block' : 'hidden'} lg:w-1/4 bg-white dark:bg-gray-900 border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col h-full`}
+        >
+          {/* 🔹 Scrollable preview area */}
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            {cardData && cardData.length > 0 ? (
+              <div className="w-full max-w-md mx-auto font-bold text-center">
+                <p className="text-left text-gray-700 font-medium">
+                  Figma Screen Preview:
+                </p>
+                <h2 className="text-xl mb-5">{cardData[0].title}</h2>
+                <img
+                  src={cardData[0].image}
+                  alt="Figma Preview"
+                  className="rounded-xl shadow-lg w-full object-contain mb-4"
                 />
-                <PromptInputTextarea
-                  ref={textareaRef}
-                  onChange={(e) => setMessage(e.target.value)}
-                  value={message}
-                  placeholder="Describe what you want to build..."
-                  className="min-h-[80px] text-base"
-                  disabled={isLoading}
-                />
-                <PromptInputToolbar>
-                  <PromptInputTools>
-                    <PromptInputImageButton
-                      onImageSelect={handleImageFiles}
-                      disabled={isLoading}
-                    />
-                  </PromptInputTools>
-                  <PromptInputTools>
-                    <PromptInputMicButton
-                      onTranscript={(transcript) => {
-                        setMessage(
-                          (prev) => prev + (prev ? ' ' : '') + transcript,
-                        )
-                      }}
-                      onError={(error) => {
-                        console.error('Speech recognition error:', error)
-                      }}
-                      disabled={isLoading}
-                    />
-                    <PromptInputSubmit
-                      disabled={!message.trim() || isLoading}
-                      status={isLoading ? 'streaming' : 'ready'}
-                    />
-                  </PromptInputTools>
-                </PromptInputToolbar>
-              </PromptInput>
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="text-gray-400 text-sm mt-12 text-center">
+                Figma preview will appear here
+              </div>
+            )}
+          </div>
+
+          {/* 🔹 Fixed bottom input area */}
+          <div className="p-4 border-t border-gray-200 bg-white dark:bg-gray-900">
+            <PromptInput
+              onSubmit={handleSendMessage}
+              className="w-full relative"
+              onImageDrop={handleImageFiles}
+              isDragOver={isDragOver}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <PromptInputImagePreview
+                attachments={attachments}
+                onRemove={handleRemoveAttachment}
+              />
+              <PromptInputTextarea
+                ref={textareaRef}
+                onChange={(e) => setMessage(e.target.value)}
+                value={message}
+                placeholder="Prompt for generating sitecore components..."
+                className="min-h-[80px] text-base"
+                disabled={isLoading || !showV0Prompt}
+              />
+              <PromptInputToolbar>
+                <PromptInputTools>
+                  <PromptInputImageButton
+                    onImageSelect={handleImageFiles}
+                    disabled={isLoading}
+                  />
+                </PromptInputTools>
+                <PromptInputTools>
+                  <PromptInputMicButton
+                    onTranscript={(transcript) =>
+                      setMessage(
+                        (prev) => prev + (prev ? ' ' : '') + transcript,
+                      )
+                    }
+                    onError={(error) =>
+                      console.error('Speech recognition error:', error)
+                    }
+                    disabled={isLoading}
+                  />
+                  <PromptInputSubmit
+                    disabled={!message.trim() || isLoading}
+                    status={isLoading ? 'streaming' : 'ready'}
+                  />
+                </PromptInputTools>
+              </PromptInputToolbar>
+            </PromptInput>
+          </div>
         </div>
       </div>
+
       {!showV0Prompt && (
-        <div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto">
-          {isMounted && cardData?.length ? (
-            <h2 className="text-xl sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-white mb-4">
-              Showing Results for Figma Id: {figmaFileId}
-            </h2>
-          ) : (
-            <></>
-          )}
-        </div>
+        // <div className=" mb-6 md:mb-6 mt-12 max-w-[1200px] mx-auto">
+        //   {isMounted && cardData?.length ? (
+        //     <h2 className="text-xl sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-white mb-4">
+        //       Showing Results for Figma Id: {figmaFileURL}
+        //     </h2>
+        //   ) : (
+        //     <></>
+        //   )}
+        // </div>
+        <></>
       )}
 
       {isMounted && cardData?.length && !showV0Prompt ? (
@@ -696,51 +729,40 @@ export function HomeClient() {
           className="flex m-auto justify-center gap-8 mb-8 w-[1200px] flex-wrap"
           suppressHydrationWarning
         >
-          {cardData?.map((card, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl shadow-md hover:shadow-lg transition w-[250px] flex flex-col overflow-hidden"
-            >
-              {/* Image wrapper */}
-              <div className="w-full h-auto overflow-hidden">
-                <img
-                  src={card.image}
-                  alt={card.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Footer (sticks to bottom) */}
-              <div className="p-4 flex flex-col flex-grow justify-end">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  {card.title}
-                </h2>
-                <p className="text-gray-500 text-sm mt-1 text-center">
-                  <button
-                    onClick={() => {
-                      convertToComponents(card)
-                    }}
-                    className="w-full mt-auto inline-flex justify-center text-center mx-auto items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"
-                  >
-                    {isLoading ? 'Converting...' : 'Convert'}
-                  </button>
-                </p>
-              </div>
+          {/* {cardData?.map((card, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-md hover:shadow-lg transition w-[250px] flex flex-col overflow-hidden"
+              >
+                
+            <div className="w-full h-auto overflow-hidden">
+              <img
+                src={card.image}
+                alt={card.title}
+                className="w-full h-full object-cover"
+              />
             </div>
-          ))}
+
+        
+            <div className="p-4 flex flex-col flex-grow justify-end">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {card.title}
+              </h2>
+              <p className="text-gray-500 text-sm mt-1 text-center">
+                <button
+                  onClick={() => {
+                    convertToComponents(card)
+                  }}
+                  className="w-full mt-auto inline-flex justify-center text-center mx-auto items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"
+                >
+                  {isLoading ? 'Converting...' : 'Convert'}
+                </button>
+              </p>
+            </div>
+          </div>
+        ))} */}
         </div>
       ) : null}
-      <div className="mt-8 md:mt-16 text-center text-sm text-muted-foreground">
-        <p>
-          Powered by{' '}
-          <Link
-            href="https://credera.com"
-            className="text-foreground hover:underline"
-          >
-            CREDERA
-          </Link>
-        </p>
-      </div>
     </div>
   )
 }
