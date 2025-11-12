@@ -96,9 +96,8 @@ function formatGuid(input: string): string {
   const clean = input.replace(/[^a-fA-F0-9]/g, '').toUpperCase()
 
   if (clean.length !== 32) {
-    throw new Error(
-      `Invalid GUID format: expected 32 hex characters, got ${clean.length}`,
-    )
+    console.log(`Invalid GUID format: expected 32 hex characters, got ${clean.length}`)    
+    return ''
   }
 
   // Split and format into standard GUID pattern: 8-4-4-4-12
