@@ -390,10 +390,10 @@ export async function createFromJson(
     'Page Data',
     IDS.PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID,
     [
-      { name: 'Page Name', value: 'Figma To Sitecore Demo' },
+      { name: 'Page Name', value: 'Home' },
       {
         name: 'Page Template',
-        value: '{807349B6-97BB-4A7A-B356-3900EBF2A629}',
+        value: '/sitecore/templates/Project/Figma Sites/Page',
       },
       { name: 'Components', value: `${JSON.stringify(pageData)}` },
     ],
