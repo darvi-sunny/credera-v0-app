@@ -7,21 +7,20 @@ export type Task = {
 }
 
 type Props = {
-  /** Array of tasks (id should be 1-based and ordered) */
   tasks: Task[]
-  /** Number of the last completed task. 0 means nothing completed yet. */
   currentStep: number
-  /** Optional: hide/show modal (default true) */
+  isError?: boolean
+  errorMessage?: string
   open?: boolean
-  /** Optional close handler for the close button */
   onClose?: () => void
-  /** Optional start handler */
   onStart?: () => void
 }
 
 export default function TaskProgressModal({
   tasks,
   currentStep,
+  isError = false,
+  errorMessage,
   open = true,
   onClose,
   onStart,
@@ -30,6 +29,9 @@ export default function TaskProgressModal({
 
   const maxTaskId = tasks.length > 0 ? Math.max(...tasks.map((t) => t.id)) : 0
   const allCompleted = currentStep >= maxTaskId && maxTaskId > 0
+
+  // Identify which task is currently failing
+  const failedTaskId = isError ? currentStep + 1 : null
 
   return (
     <div
@@ -45,8 +47,7 @@ export default function TaskProgressModal({
             id="modal-title"
             className="text-lg font-semibold text-gray-900 flex items-center gap-3"
           >
-            {/* Spinner: hidden when everything is finished or before start */}
-            {currentStep > 0 && !allCompleted && (
+            {currentStep > 0 && !allCompleted && !isError && (
               <svg
                 className="w-5 h-5 text-blue-600 animate-spin"
                 xmlns="http://www.w3.org/2000/svg"
@@ -72,27 +73,13 @@ export default function TaskProgressModal({
             Processing Tasks...
           </h2>
 
-          {/* Close button (calls onClose if provided) */}
           <button
-            className="p-2 rounded-md hover:bg-gray-100 focus:outline-none"
+            className="p-2 rounded-md hover:bg-gray-100"
             aria-label="Close"
             onClick={() => onClose?.()}
             type="button"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-gray-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            ✕
           </button>
         </div>
 
@@ -105,47 +92,77 @@ export default function TaskProgressModal({
 
           <ol className="space-y-4">
             {tasks.map((task) => {
-              const completed = task.id <= currentStep && currentStep > 0
+              const isFailed = failedTaskId === task.id
+              const completed = task.id <= currentStep && !isFailed
               const isActive =
-                currentStep > 0 && !allCompleted && task.id === currentStep + 1
+                !isError &&
+                currentStep > 0 &&
+                !allCompleted &&
+                task.id === currentStep + 1
+
+              // Circle styling logic
+              const circleClass =
+                `flex items-center justify-center w-9 h-9 rounded-full font-semibold border-2 ` +
+                (isFailed
+                  ? 'bg-red-500 text-white border-red-500'
+                  : completed
+                  ? 'bg-green-500 text-white border-green-500'
+                  : isActive
+                  ? 'bg-blue-100 text-blue-600 border-blue-400 animate-pulse'
+                  : 'bg-white text-gray-700 border-gray-200')
+
+              // Status label
+              const statusLabel = isFailed
+                ? 'Failed'
+                : completed
+                ? 'Completed'
+                : isActive
+                ? 'In progress...'
+                : 'Pending'
+
+              const statusClass =
+                isFailed
+                  ? 'text-red-600'
+                  : completed
+                  ? 'text-green-600'
+                  : isActive
+                  ? 'text-blue-600'
+                  : 'text-gray-500'
 
               return (
                 <li key={task.id} className="flex items-start gap-4">
                   <div className="flex-shrink-0">
-                    {/* Circle: change classes based on state */}
-                    <div
-                      className={
-                        `flex items-center justify-center w-9 h-9 rounded-full font-semibold border-2 ` +
-                        (completed
-                          ? 'bg-green-500 text-white border-green-500'
-                          : isActive
-                            ? 'bg-blue-100 text-blue-600 border-blue-400 animate-pulse'
-                            : 'bg-white text-gray-700 border-gray-200')
-                      }
-                      aria-hidden="true"
-                    >
-                      {task.id}
-                    </div>
+                    <div className={circleClass}>{task.id}</div>
                   </div>
 
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-900">
+                      <h3
+                        className={`text-sm font-medium ${
+                          isFailed ? 'text-red-700' : 'text-gray-900'
+                        }`}
+                      >
                         {task.title}
                       </h3>
-                      <span
-                        className={`text-xs font-medium ${completed ? 'text-green-600' : isActive ? 'text-blue-600' : 'text-gray-500'}`}
-                      >
-                        {completed
-                          ? 'Completed'
-                          : isActive
-                            ? 'In progress...'
-                            : 'Pending'}
+
+                      <span className={`text-xs font-medium ${statusClass}`}>
+                        {statusLabel}
                       </span>
                     </div>
+
                     {task.description && (
-                      <p className="mt-1 text-sm text-gray-600">
+                      <p
+                        className={`mt-1 text-sm ${
+                          isFailed ? 'text-red-600' : 'text-gray-600'
+                        }`}
+                      >
                         {task.description}
+                      </p>
+                    )}
+
+                    {isFailed && errorMessage && (
+                      <p className="mt-2 text-xs text-red-600">
+                        {errorMessage}
                       </p>
                     )}
                   </div>
@@ -153,18 +170,6 @@ export default function TaskProgressModal({
               )
             })}
           </ol>
-
-          {/* Start Button visible only when nothing started */}
-          {/* {currentStep === 0 && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={onStart}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none"
-              >
-                Start
-              </button>
-            </div>
-          )} */}
         </div>
       </div>
     </div>
