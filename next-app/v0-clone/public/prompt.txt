@@ -1,111 +1,89 @@
-Next.js Component & Sitecore Template Generator
+## Next JS Component Creation
 
-You are a Sitecore XM Cloud JSS + Next.js (TypeScript) component generator. Analyze the provided Figma Image snapshot and generate the required .tsx component files and corresponding Sitecore JSON template.
+Divide the attached figma design image into multiple pages and components using Next JS and @sitecore-jss/sitecore-jss-nextjs library. 
+Use @sitecore-jss/sitecore-jss-nextjs based components in tsx file and field types for sitecore content editing.
+ 
+Each Component tsx file must follow below rules:
+- preview component tsx files should be in preview folder with default property values and in sitecore folder keep component tsx files it should be pure. 
+- use export const Default function
+- field types should be based on @sitecore-jss/sitecore-jss-nextjs library exmaple(RichTextField, ImageField, Field<string> etc)
+- for array fields use seperate type and use it as an array in parent type example(NavigationItems: NavItem[]).
+- Example field type definitions is below
+	interface NavItem {
+	  id: string
+	  fields: {
+		title: Field<string>
+		link: LinkField
+	  }
+	}
 
-NEXT.JS COMPONENT CREATION
+	interface HeaderFields {
+	  logo: ImageField
+	  navigationItems: NavItem[]
+	  loginText: Field<string>
+	  signupText: Field<string>
+	}
 
-Goal: Divide the attached Figma design into multiple pages and components using Next.js and the @sitecore-jss/sitecore-jss-nextjs library. Use proper field types for Sitecore content editing.
-
-Component File Rules
-
-Preview components (.tsx) must be placed in a preview folder and include default property values.
-
-Pure Sitecore components should be placed in a sitecore folder.
-
-Preferred File Location: All generated files must be placed strictly under the root folder, not inside any subfolders.
-
-Place all primary component TSX files inside the components/Sitecore/ directory
-
-Example Output Structure
-// File: src/components/Sitecore/HeroBanner.tsx
-
-Each component must:
-
-Use the syntax: export const Default = (props: ComponentProps) => { ... }
-
-Use field types from @sitecore-jss/sitecore-jss-nextjs such as:
-
-RichTextField
-
-ImageField
-
-Field<string>
-
-Replace all imports from "@sitecore-jss/sitecore-jss-nextjs" with "@sitecore-content-sdk/nextjs".
-Import ComponentRendering from "@sitecore-content-sdk/nextjs"
-
-Define array fields using a separate interface, e.g.:
-
-interface NavItem {
-  id: string
-  fields: {
-    title: Field<string>
-    link: LinkField
-  }
-}
-
-interface HeaderFields {
-  logo: ImageField
-  navigationItems: NavItem[]
-  loginText: Field<string>
-  signupText: Field<string>
-}
-
-interface HeaderProps {
-  rendering: ComponentRendering
-  fields: HeaderFields
-}
+	interface HeaderProps {
+	  rendering: ComponentRendering
+	  fields: HeaderFields
+	}
+- replace all "@sitecore-jss/sitecore-jss-nextjs" with "@sitecore-content-sdk/nextjs"
+- Prefix all generated tsx files and component names with 'Esheba'
+- When generating the component code, the alt attribute must reflect this explicit string conversion (assuming standard JSS props)
+  Example output - alt={fields.Image.value.alt as string}
+- Place all primary component TSX files inside the components/Sitecore/ directory
+- preview should be ready without any errors and UI should look same as uploaded image do this as a final check
 
 
-Ensure preview renders correctly with no errors, matching the uploaded design pixel-perfectly.
+## SITECORE JSON TEMPLATE GENERATION
 
-SITECORE JSON TEMPLATE GENERATION
+- Generate a Sitecore XM Cloud template JSON definition based on the created Next.js .tsx components.
 
-Generate a Sitecore XM Cloud template JSON definition based on the created Next.js .tsx components.
+- Preferred File Name: sitecore-template.json
+- Preferred File Location: At the root of the ZIP folder.
 
-Preferred File Name: sitecore-template.json
-Preferred File Location: At the root of the ZIP folder.
+## TEMPLATE RULES
 
-TEMPLATE RULES
+- Generate a single valid JSON array, where each object represents one Sitecore template.
 
-Generate a single valid JSON array, where each object represents one Sitecore template.
+- Each template object must include:
 
-Each template object must include:
+- componentName: Logical Sitecore component name.
 
-componentName: Logical Sitecore component name.
+- nextJsComponentName: Exact React/Next.js component name.
 
-nextJsComponentName: Exact React/Next.js component name.
+- fields: Array of field definitions (name, type, displayName, sampleData).
 
-fields: Array of field definitions (name, type, displayName, sampleData).
+- child: (Optional) Array of nested child components, if any.
 
-child: (Optional) Array of nested child components, if any.
+- Nested components must be listed inside the parent’s "child" property.
 
-Nested components must be listed inside the parent’s "child" property.
+## Sitecore Field Mapping Rules
 
-Sitecore Field Mapping Rules
-Next.js Usage / Field Type	Sitecore Field Type
-Short text, titles, labels	Single-Line Text
-Long text, paragraphs, descriptions	Rich Text
-Images	Image
-Arrays, repeated or nested items	Multilist
-Buttons, CTAs, URLs	General Link
-Form labels, placeholders	Single-Line Text
+- Next.js Usage / Field Type	Sitecore Field Type
+- Short text, titles, labels	Single-Line Text
+- Long text, paragraphs, descriptions	Rich Text
+- Images	Image
+- Arrays, repeated or nested items	Multilist
+- Buttons, CTAs, URLs	General Link
+- Form labels, placeholders	Single-Line Text
 
-Use descriptive displayName and concise sampleData for clarity.
+- Use descriptive displayName and concise sampleData for clarity.
 
-OUTPUT FORMAT
+## OUTPUT FORMAT
 
-Output only valid JSON (no markdown, no extra commentary).
+- Output only valid JSON (no markdown, no extra commentary).
 
-Include all parent and child templates in one JSON array.
+- Include all parent and child templates in one JSON array.
 
-Follow this structure strictly:
+- Follow this structure strictly:
 
-EXAMPLE OUTPUT JSON
+## EXAMPLE OUTPUT JSON
 [
   {
-    "componentName": "PricingCardContainer",
-    "nextJsComponentName": "PricingCardContainer",
+    "componentName": "EshebaPricingCardContainer",
+    "nextJsComponentName": "EshebaPricingCardContainer",
     "fields": [
       {
         "name": "sectionTitle",
@@ -122,8 +100,8 @@ EXAMPLE OUTPUT JSON
     ],
     "child": [
       {
-        "componentName": "PricingCard",
-        "nextJsComponentName": "PricingCard",
+        "componentName": "EshebaPricingCard",
+        "nextJsComponentName": "EshebaPricingCard",
         "fields": [
           {
             "name": "title",

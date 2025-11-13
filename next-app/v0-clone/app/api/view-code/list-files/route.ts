@@ -14,7 +14,7 @@ async function walk(
     if (e.isDirectory()) {
       out.push(...(await walk(full, root)))
     } else {
-      if (/\.(ts|tsx|json)$/.test(e.name)) {
+      if (/\.(ts|tsx|json|css)$/.test(e.name)) {
         out.push({
           path: path.relative(root, full).replace(/\\/g, '/'),
           name: e.name,

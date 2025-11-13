@@ -574,7 +574,7 @@ export function HomeClient() {
             <div className="max-w-3xl w-full">
               <div className=" mb-8 md:mb-12 text-center">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-1">
-                  Figma to Sitecore
+                  Figma to Sitecore AI Assistant
                 </h2>
               </div>
 
