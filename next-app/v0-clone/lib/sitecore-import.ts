@@ -74,11 +74,12 @@ const IDS = {
   RENDERING_TEMPLATE_ID: '{04646A89-996F-4EE7-878A-FFDBF1F0EF0D}',
   TEMPLATE_FOLDER_ID: '{0437FEE2-44C9-46A6-ABE9-28858D9FEE8C}',
   PAGE_SAMPLE_DATA_PARENT_ID: process.env.PAGE_SAMPLE_DATA_PARENT_ID as string,
-  PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID: process.env.PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID as string,
+  PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID: process.env
+    .PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID as string,
 }
 
 // How many sample items to create per data-folder (configurable)
-const SAMPLE_ITEM_COUNT = 3
+const SAMPLE_ITEM_COUNT = 4
 const PARENT_SAMPLE_ITEM_COUNT = 1
 let pageData: {
   componentName: string
@@ -96,7 +97,9 @@ function formatGuid(input: string): string {
   const clean = input.replace(/[^a-fA-F0-9]/g, '').toUpperCase()
 
   if (clean.length !== 32) {
-    console.log(`Invalid GUID format: expected 32 hex characters, got ${clean.length}`)    
+    console.log(
+      `Invalid GUID format: expected 32 hex characters, got ${clean.length}`,
+    )
     return ''
   }
 
@@ -364,41 +367,46 @@ async function createContentItem(
 export async function createFromJson(
   templates: SitecoreTemplateDefinition[],
 ): Promise<CreationSummary[]> {
-  if (!Array.isArray(templates))
-    throw new Error('Input must be an array of templates')
-  for (const t of templates) t.multiListSourceIds = t.multiListSourceIds || []
+  try {
+    if (!Array.isArray(templates))
+      throw new Error('Input must be an array of templates')
+    for (const t of templates) t.multiListSourceIds = t.multiListSourceIds || []
 
-  const summaries: CreationSummary[] = []
+    const summaries: CreationSummary[] = []
 
-  for (const tpl of templates) {
-    const summary = await createOneTemplateFlow(tpl)
-    summaries.push(summary)
-    
-    // Collect page data info fo final push into page data item
-    pageData.push({
-      componentName: summary.componentName,
-      templateId: summary.templateId,
-      renderingId: summary.renderingId,
-      dataFolderId: summary.dataFolderId,
-      dataSourceItemId: summary.dataSourceItemId,
-    })
+    for (const tpl of templates) {
+      const summary = await createOneTemplateFlow(tpl)
+      summaries.push(summary)
+
+      // Collect page data info fo final push into page data item
+      pageData.push({
+        componentName: summary.componentName,
+        templateId: summary.templateId,
+        renderingId: summary.renderingId,
+        dataFolderId: summary.dataFolderId,
+        dataSourceItemId: summary.dataSourceItemId,
+      })
+    }
+    // Create page data item under /sitecore/system/Settings/Project/Figma Integration
+
+    const pageDataItem = await createContentItem(
+      IDS.PAGE_SAMPLE_DATA_PARENT_ID,
+      'Page Data',
+      IDS.PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID,
+      [
+        { name: 'Page Name', value: 'Home' },
+        {
+          name: 'Page Template',
+          value: '/sitecore/templates/Project/Figma Sites/Page',
+        },
+        { name: 'Components', value: `${JSON.stringify(pageData)}` },
+      ],
+    )
+    return summaries
+  } catch (error) {
+    console.error('Error creating templates from JSON:', error)
+    throw new Error(`Error creating templates from JSON: ${error}`)    
   }
-  // Create page data item under /sitecore/system/Settings/Project/Figma Integration
-    
-  const pageDataItem = await createContentItem(
-    IDS.PAGE_SAMPLE_DATA_PARENT_ID,
-    'Page Data',
-    IDS.PAGE_SAMPLE_DATA_ITEM_TEMPLATE_ID,
-    [
-      { name: 'Page Name', value: 'Home' },
-      {
-        name: 'Page Template',
-        value: '/sitecore/templates/Project/Figma Sites/Page',
-      },
-      { name: 'Components', value: `${JSON.stringify(pageData)}` },
-    ],
-  ) 
-  return summaries
 }
 
 // createChildren accepts parent folder ids (always provided by createOneTemplateFlow)

@@ -27,6 +27,7 @@ interface AppHeaderProps {
 type ApiResult<T = any> = { ok: true; data: T } | { ok: false; error: string }
 
 const tasks: Task[] = [
+  { id: 0, title: 'Start', description: 'Started importing...' },
   { id: 1, title: 'Download zip', description: 'downloading zip...' },
   { id: 2, title: 'Unzip artifacts', description: 'Extracting files....' },
   {
@@ -129,6 +130,8 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
 
   // small spinner when "View Code" is running
   const [isViewing, setIsViewing] = useState(false)
+  const [isError, setIsError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
   // derive chatId from pathname when pathname changes
   useEffect(() => {
@@ -162,39 +165,71 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
         setCurrentStep(0)
 
         // 1. download
-        setCurrentStep(1)
         const dl = await downloadZip(chatId, isView)
-        if (!dl.ok) throw new Error(dl.error)
+        if (!dl.ok) {
+          setIsError(true)
+          setErrorMessage(dl.error)
+          console.error('Unzip failed:', dl.error)
+          return
+        }
         const { savedTo, file } = dl.data || {}
         const zipRef = savedTo || file
-        if (!zipRef) throw new Error('Download API did not return a file path')
+        if (!zipRef) {
+          console.error('Download API did not return a file path')
+          setIsError(true)
+          setErrorMessage('Download API did not return a file path')
+          return
+        }
+        setCurrentStep(1)
 
-        // 2. unzip
-        setCurrentStep(2)
+        // 2. unzip        
         const unzip = await unzipArtifacts(zipRef)
-        if (!unzip.ok) throw new Error(unzip.error)
+        if (!unzip.ok) {
+          setIsError(true)
+          setErrorMessage(unzip.error)
+          console.error('Unzip failed:', unzip.error)
+          return
+        }
         const extracted = unzip.data?.extractedPath
+        setCurrentStep(2)
 
-        // 3. copy
-        setCurrentStep(3)
+        // 3. copy       
         const copy = await copyFiles(extracted || '')
-        if (!copy.ok) throw new Error(copy.error)
+        if (!copy.ok) {
+          setIsError(true)
+          setErrorMessage(copy.error)
+          console.error('Copy failed:', copy.error)
+          return
+        }
+        setCurrentStep(3)
 
-        // 4. import
-        setCurrentStep(4)
+        // 4. import        
         const imp = await importSitecore(extracted)
-        if (!imp.ok) throw new Error(imp.error)
+        if (!imp.ok) {
+          setIsError(true)
+          setErrorMessage(imp.error)
+          console.error('Copy failed:', imp.error)
+          return
+        }
+        // add 15 seconds delay to simulate longer processing time
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        setCurrentStep(4)
 
-        // 5. cleanup
-        setCurrentStep(5)
+        // 5. cleanup        
         const clean = await cleanUp()
-        if (!clean.ok) throw new Error(clean.error)
-
+        if (!clean.ok) {
+          setIsError(true)
+          setErrorMessage(clean.error)
+          console.error('Copy failed:', clean.error)
+          return
+        }
+        setCurrentStep(5)
+        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setCurrentStep(6)
       } catch (err: any) {
         console.error('pushToSitecore failed:', err?.message ?? err)
-      } finally {
-        // keep modal open to show results; caller may close
+      } finally {        
       }
     },
     [chatId],
@@ -317,6 +352,8 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
         currentStep={currentStep}
         open={taskModalOpen}
         onClose={() => setTaskModalOpen(false)}
+        isError={isError}
+        errorMessage={errorMessage}
       />
 
       {isCodeViewOpen && extractedPath && (

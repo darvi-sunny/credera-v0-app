@@ -8,6 +8,8 @@ import {
   createFromJson,
   SitecoreTemplateDefinition,
 } from '@/lib/sitecore-import'
+import { json } from 'zod'
+import { sum } from 'drizzle-orm'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*', // change to specific origin in production
@@ -62,15 +64,17 @@ export async function POST(request: Request) {
     let parsed
     try {
       parsed = JSON.parse(fileContents)
-      createFromJson(parsed as SitecoreTemplateDefinition[])
-    } catch (e) {
+      const summaries = await createFromJson(
+        parsed as SitecoreTemplateDefinition[],
+      )      
+    } catch (e) {      
       return NextResponse.json(
-        { error: 'File exists but is not valid JSON.' },
+        { error: e instanceof Error ? e.message : 'Error processing templates.' },
         { status: 500, headers: CORS_HEADERS },
       )
     }
 
-    return NextResponse.json(parsed, { status: 200, headers: CORS_HEADERS })
+    return NextResponse.json({ ok: true, status: 200, headers: CORS_HEADERS})
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
