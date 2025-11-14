@@ -47,7 +47,8 @@ function SearchParamsHandler({ onReset }: { onReset: () => void }) {
 }
 
 export function HomeClient() {
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('')
   const [cardData, setCardData] = useState<Card[] | null>(null)
   const [isMounted, setIsMounted] = useState(false)
   const [figmaFileURL, setFigmaFileURL] = useState('')
@@ -177,7 +178,13 @@ export function HomeClient() {
   const generateScreenshots = async (e?: FormEvent) => {
     e?.preventDefault()
     if (!figmaFileURL) return
-    const result = extractFigmaIds(figmaFileURL)
+    const result = extractFigmaIds(figmaFileURL);
+
+    if (!result?.fileId || !result?.nodeId) {
+      setIsLoading(false);
+      setError('Invalid Figma URL. Please check and try again.');
+      return;
+    }
 
     setIsLoading(true)
     try {
@@ -187,8 +194,11 @@ export function HomeClient() {
           method: 'GET',
         },
       )
+
       if (!response.ok) {
-        throw new Error('Failed to generate screenshots')
+        setIsLoading(false);
+        setError('Failed to generate screenshots.');
+        throw new Error('Failed to generate screenshots');
       }
       const data = await response.json()
       setCardData(data.pages)
@@ -405,7 +415,7 @@ export function HomeClient() {
       setIsLoading(false)
 
       const fakeEvent = {
-        preventDefault: () => {},
+        preventDefault: () => { },
       } as React.FormEvent<HTMLFormElement>
       setshowV0Prompt(true)
       // await handleSendMessage(fakeEvent);
@@ -596,6 +606,7 @@ export function HomeClient() {
                     name="figmaFileURL"
                     type="text"
                     required
+                    onChangeCapture={(e) => setError('')}
                     placeholder="Figma File URL"
                     value={figmaFileURL}
                     onChange={(e) => setFigmaFileURL(e.target.value)}
@@ -609,7 +620,7 @@ export function HomeClient() {
                   </button>
                 </div>
                 <p id="emailHelp" className="mt-2 text-xs text-gray-400">
-                  We’ll never share your Figma URL with anyone.
+                  {error && error != '' ? <span className='text-red-600'>{error}</span> : ' We’ll never share your Figma URL with anyone.'}
                 </p>
               </form>
               <div className="mt-4 mb-8 md:mb-12 flex justify-between">
